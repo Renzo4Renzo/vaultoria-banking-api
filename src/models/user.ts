@@ -33,5 +33,3 @@ export const initializeUser = () => {
     }
   );
 };
-
-export default User;

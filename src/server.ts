@@ -3,14 +3,14 @@ dotenv.config();
 
 import express from "express";
 import sequelize from "./databases/database";
-import { initializeUser } from "./models/user";
+import { initializeModels } from "./models/index";
 import userRoutes from "./routes/user.routes";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 app.use(express.json());
 
-initializeUser();
+initializeModels();
 
 console.log("Registered models:", sequelize.models);
 
