@@ -1,9 +1,8 @@
-import { Router, Request, Response } from "express";
+import { Router } from "express";
+import { postUser } from "../controllers/user.controller";
 
 const router = Router();
 
-router.get("/", (req: Request, res: Response) => {
-  res.json({ message: "Hello!" });
-});
+router.post("/", postUser);
 
 export default router;

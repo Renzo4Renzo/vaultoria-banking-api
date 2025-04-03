@@ -1,34 +1,29 @@
 import { DataTypes, Model } from "sequelize";
 import sequelize from "../databases/database";
 
-export class User extends Model {
+export class Account extends Model {
   public id!: number;
-  public name!: string;
-  public email!: string;
+  public balance!: number;
 }
 
-export const initializeUser = () => {
-  User.init(
+export const initializeAccount = () => {
+  Account.init(
     {
       id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
       },
-      name: {
-        type: DataTypes.STRING,
+      balance: {
+        type: DataTypes.DECIMAL(12, 2),
         allowNull: false,
-      },
-      email: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        unique: true,
+        defaultValue: 0.0,
       },
     },
     {
       sequelize,
-      modelName: "User",
-      tableName: "users",
+      modelName: "Account",
+      tableName: "accounts",
       timestamps: false,
     }
   );
