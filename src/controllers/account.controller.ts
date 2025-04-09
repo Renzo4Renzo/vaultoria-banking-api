@@ -1,14 +1,16 @@
 import { Response } from "express";
 import { AuthRequest } from "../middleware/auth";
-import { createAccount } from "../services/account.service";
+import { createAccount, getAccountBalance } from "../services/account.service";
 import { ApiResponse } from "../utils/response";
+import { validateRequiredFields } from "../utils/validateRequiredFields";
 
 export const postAccount = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const user_id = req.user?.id;
+    const user_id = Number(req.user?.id);
 
-    if (!user_id) {
-      ApiResponse.error(res, 400, { message: `user_id is required`, code: "VALIDATION_MISSING_FIELDS" });
+    const isValid = validateRequiredFields(res, { user_id }, ["user_id"]);
+
+    if (!isValid) {
       return;
     }
 
@@ -24,6 +26,43 @@ export const postAccount = async (req: AuthRequest, res: Response): Promise<void
       ApiResponse.error(res, 400, {
         message: error.message,
         code: "USER_NOT_FOUND",
+      });
+      return;
+    }
+
+    ApiResponse.failSafe(res, error);
+  }
+};
+
+export const getBalance = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const user_id = Number(req.user?.id);
+    const account_id = Number(req.params.account_id);
+
+    const isValid = validateRequiredFields(res, { user_id, account_id }, ["user_id", "account_id"]);
+
+    if (!isValid) {
+      return;
+    }
+
+    const balance = await getAccountBalance(user_id, Number(account_id));
+
+    ApiResponse.success(res, 200, {
+      message: "Balance retrieved successfully",
+      code: "BALANCE_RETRIEVED",
+      data: { balance },
+    });
+  } catch (error: any) {
+    const errorMap: Record<string, { status: number; code: string }> = {
+      "Account not found": { status: 404, code: "ACCOUNT_NOT_FOUND" },
+      "Unauthorized access to account": { status: 403, code: "RETRIEVE_ACCOUNT_NOT_AUTHORIZED" },
+    };
+
+    if (error.message && errorMap[error.message]) {
+      const { status, code } = errorMap[error.message];
+      ApiResponse.error(res, status, {
+        message: error.message,
+        code,
       });
       return;
     }

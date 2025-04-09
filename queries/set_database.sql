@@ -60,31 +60,3 @@ BEGIN
     RAISE NOTICE 'Created account % for user %', new_account_id, uid;
   END LOOP;
 END $$;
-
---Queries
-
---Create a User
-INSERT INTO users (name, email) VALUES ($1, $2) RETURNING *;
-
---Create an Account (and Account Owner relationship)
-DO $$
-DECLARE
-  user_exists BOOLEAN;
-  new_account_id INTEGER;
-BEGIN
-  -- Check if the user exists
-  SELECT EXISTS(SELECT 1 FROM users WHERE id = $1) INTO user_exists;
-
-  IF NOT user_exists THEN
-    RAISE EXCEPTION 'User not found';
-  END IF;
-
-  -- Create the account
-  INSERT INTO accounts (balance)
-  VALUES (0.00)
-  RETURNING id INTO new_account_id;
-
-  -- Create the account owner link
-  INSERT INTO account_owners (user_id, account_id)
-  VALUES ($1, new_account_id);
-END $$;

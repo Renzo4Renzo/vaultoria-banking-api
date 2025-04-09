@@ -1,0 +1,238 @@
+import sequelize from "../databases/database";
+
+import { Transaction } from "../models/Transaction";
+import { Account } from "../models/Account";
+import { AccountOwner } from "../models/AccountOwner";
+import { TransactionLog, transactionLogType } from "../models/TransactionLog";
+import { DepositIntoAccountDTO, TransferFromAccountDTO, WithdrawFromAccountDTO } from "../dtos/transaction.dto";
+
+type TransactionWithStatus = Transaction & { status?: transactionLogType };
+
+export const depositIntoAccount = async ({
+  user_id,
+  to_account_id,
+  amount,
+  request_id,
+}: DepositIntoAccountDTO): Promise<Transaction> => {
+  if (request_id) {
+    const existingTransaction = await Transaction.findOne({ where: { request_id } });
+    if (existingTransaction) {
+      return existingTransaction;
+    }
+  }
+
+  const newTransaction = await Transaction.create({
+    type: "DEPOSIT",
+    amount,
+    to_account_id: null,
+    request_id: request_id || null,
+  });
+
+  const transactionLog = await TransactionLog.create({
+    transaction_id: newTransaction.id,
+    status: "PENDING",
+  });
+
+  try {
+    await sequelize.transaction(async (t) => {
+      const account = await Account.findByPk(to_account_id, { transaction: t, lock: t.LOCK.UPDATE });
+
+      if (!account) {
+        throw new Error("Account not found");
+      }
+
+      const isOwner = await AccountOwner.findOne({
+        where: {
+          user_id,
+          account_id: to_account_id,
+        },
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+
+      if (!isOwner) {
+        throw new Error("Unauthorized access to account");
+      }
+
+      await newTransaction.update({ to_account_id }, { transaction: t });
+
+      const newBalance = Number(account.balance) + amount;
+      await account.update({ balance: newBalance }, { transaction: t });
+    });
+
+    await transactionLog.update({
+      status: "COMPLETED",
+    });
+
+    return newTransaction;
+  } catch (error: any) {
+    await transactionLog.update({
+      status: "FAILED",
+      error_message: error.message,
+    });
+
+    throw error;
+  }
+};
+
+export const withdrawFromAccount = async ({
+  user_id,
+  from_account_id,
+  amount,
+  request_id,
+}: WithdrawFromAccountDTO): Promise<Transaction> => {
+  if (request_id) {
+    const existingTransaction = await Transaction.findOne({ where: { request_id } });
+    if (existingTransaction) {
+      return existingTransaction;
+    }
+  }
+
+  const newTransaction = await Transaction.create({
+    type: "WITHDRAWAL",
+    amount,
+    from_account_id: null,
+    request_id: request_id || null,
+  });
+
+  const transactionLog = await TransactionLog.create({
+    transaction_id: newTransaction.id,
+    status: "PENDING",
+  });
+
+  try {
+    await sequelize.transaction(async (t) => {
+      const account = await Account.findByPk(from_account_id, { transaction: t, lock: t.LOCK.UPDATE });
+
+      if (!account) {
+        throw new Error("Account not found");
+      }
+
+      const isOwner = await AccountOwner.findOne({
+        where: {
+          user_id,
+          account_id: from_account_id,
+        },
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+
+      if (!isOwner) {
+        throw new Error("Unauthorized access to account");
+      }
+
+      await newTransaction.update({ from_account_id }, { transaction: t });
+
+      if (account.balance - amount < 0) {
+        throw new Error("Insufficient balance");
+      }
+
+      const newBalance = Number(account.balance) - amount;
+      await account.update({ balance: newBalance }, { transaction: t });
+    });
+
+    await transactionLog.update({
+      status: "COMPLETED",
+    });
+
+    return newTransaction;
+  } catch (error: any) {
+    await transactionLog.update({
+      status: "FAILED",
+      error_message: error.message,
+    });
+
+    throw error;
+  }
+};
+
+export const transferToAccount = async ({
+  user_id,
+  from_account_id,
+  to_account_id,
+  amount,
+  request_id,
+}: TransferFromAccountDTO): Promise<TransactionWithStatus> => {
+  if (request_id) {
+    const existingTransaction = await Transaction.findOne({ where: { request_id } });
+    if (existingTransaction) {
+      const existingLog = await TransactionLog.findOne({ where: { transaction_id: existingTransaction.id } });
+      return { ...existingTransaction.get({ plain: true }), status: existingLog!.status };
+    }
+  }
+
+  const newTransaction = await Transaction.create({
+    type: "TRANSFER",
+    amount,
+    from_account_id: null,
+    to_account_id: null,
+    request_id: request_id || null,
+  });
+
+  const transactionLog = await TransactionLog.create({
+    transaction_id: newTransaction.id,
+    status: "PENDING",
+  });
+
+  try {
+    await sequelize.transaction(async (t) => {
+      const sourceAccount = await Account.findByPk(from_account_id, { transaction: t, lock: t.LOCK.UPDATE });
+      const destinationAccount = await Account.findByPk(to_account_id, { transaction: t, lock: t.LOCK.UPDATE });
+
+      if (!sourceAccount) {
+        throw new Error("Source account not found");
+      }
+
+      if (!destinationAccount) {
+        throw new Error("Destination account not found");
+      }
+
+      const isOwner = await AccountOwner.findOne({
+        where: {
+          user_id,
+          account_id: from_account_id,
+        },
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+
+      if (!isOwner) {
+        throw new Error("Unauthorized access to account");
+      }
+
+      await AccountOwner.findOne({
+        where: {
+          user_id,
+          account_id: to_account_id,
+        },
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+
+      await newTransaction.update({ from_account_id, to_account_id }, { transaction: t });
+
+      if (sourceAccount.balance - amount < 0) {
+        throw new Error("Insufficient balance");
+      }
+
+      const newSourceBalance = Number(sourceAccount.balance) - amount;
+      const newDestinationBalance = Number(destinationAccount.balance) + amount;
+
+      await sourceAccount.update({ balance: newSourceBalance }, { transaction: t });
+      await destinationAccount.update({ balance: newDestinationBalance }, { transaction: t });
+    });
+
+    await transactionLog.update({
+      status: "COMPLETED",
+    });
+
+    return newTransaction;
+  } catch (error: any) {
+    await transactionLog.update({
+      status: "FAILED",
+      error_message: error.message,
+    });
+
+    throw error;
+  }
+};

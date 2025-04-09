@@ -10,6 +10,7 @@ export class Transaction extends Model {
   public amount!: number;
   public from_account_id?: number;
   public to_account_id?: number;
+  public request_id?: string;
 }
 
 export const initializeTransaction = () => {
@@ -35,6 +36,11 @@ export const initializeTransaction = () => {
       to_account_id: {
         type: DataTypes.INTEGER,
         allowNull: true,
+      },
+      request_id: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+        unique: true,
       },
     },
     {

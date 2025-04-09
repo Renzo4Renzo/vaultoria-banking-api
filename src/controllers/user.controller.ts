@@ -2,13 +2,15 @@ import { Request, Response } from "express";
 import { createUser } from "../services/user.service";
 import { ValidationError } from "sequelize";
 import { ApiResponse } from "../utils/response";
+import { validateRequiredFields } from "../utils/validateRequiredFields";
 
 export const postUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, email } = req.body;
 
-    if (!name || !email) {
-      ApiResponse.error(res, 400, { message: `Name and email are required`, code: "VALIDATION_MISSING_FIELDS" });
+    const isValid = validateRequiredFields(res, req.body, ["name", "email"]);
+
+    if (!isValid) {
       return;
     }
 
