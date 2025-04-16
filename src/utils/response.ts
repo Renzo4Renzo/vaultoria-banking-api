@@ -9,6 +9,7 @@ interface SuccessResponseOptions {
 interface ErrorResponseOptions {
   message?: string;
   code?: string;
+  data?: any;
   errors?: string[];
 }
 
@@ -25,12 +26,13 @@ export class ApiResponse {
   }
 
   static error(res: Response, statusCode = 500, options: ErrorResponseOptions = {}) {
-    const { message = "Internal Server Error", code = "INTERNAL_ERROR", errors } = options;
+    const { message = "Internal Server Error", code = "INTERNAL_ERROR", data, errors } = options;
 
     return res.status(statusCode).json({
       success: false,
       code,
       message,
+      ...(data ? { data } : {}),
       ...(errors ? { errors } : {}),
     });
   }

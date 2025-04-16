@@ -3,6 +3,7 @@ import { depositIntoAccount, transferToAccount, withdrawFromAccount } from "../s
 import { AuthRequest } from "../middleware/auth";
 import { ApiResponse } from "../utils/response";
 import { validateRequiredFields } from "../utils/validateRequiredFields";
+import { TransactionType, TransactionWithLogInfo } from "../utils/types";
 
 const errorMap: Record<string, { status: number; code: string }> = {
   "Account not found": { status: 404, code: "ACCOUNT_NOT_FOUND" },
@@ -10,6 +11,37 @@ const errorMap: Record<string, { status: number; code: string }> = {
   "Destination account not found": { status: 404, code: "DESTINATION_ACCOUNT_NOT_FOUND" },
   "Unauthorized access to account": { status: 403, code: "TRANSACTION_NOT_AUTHORIZED" },
   "Insufficient balance": { status: 409, code: "INSUFFICIENT_BALANCE" },
+};
+
+interface IdempotentValidationOptions {
+  res: Response;
+  transaction: TransactionWithLogInfo;
+  expectedType: TransactionType;
+}
+
+export const validateIdempotentTransaction = ({
+  res,
+  transaction,
+  expectedType,
+}: IdempotentValidationOptions): boolean => {
+  if (transaction.type !== expectedType) {
+    ApiResponse.error(res, 400, {
+      message: `The Idempotency-Key Header should belong to a ${expectedType.toLowerCase()} operation`,
+      code: "INCORRECT_TRANSACTION",
+    });
+    return false;
+  }
+
+  if (transaction.status) {
+    ApiResponse.error(res, 409, {
+      message: "This request has already been processed",
+      code: "DUPLICATE_TRANSACTION",
+      data: transaction,
+    });
+    return false;
+  }
+
+  return true;
 };
 
 export const deposit = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -33,6 +65,10 @@ export const deposit = async (req: AuthRequest, res: Response): Promise<void> =>
     }
 
     const depositTransaction = await depositIntoAccount({ user_id, to_account_id, amount, request_id: idempotencyKey });
+
+    if (!validateIdempotentTransaction({ res, transaction: depositTransaction, expectedType: "DEPOSIT" })) {
+      return;
+    }
 
     ApiResponse.success(res, 200, {
       message: "Deposit completed successfully",
@@ -80,6 +116,10 @@ export const withdraw = async (req: AuthRequest, res: Response): Promise<void> =
       request_id: idempotencyKey,
     });
 
+    if (!validateIdempotentTransaction({ res, transaction: withdrawTransaction, expectedType: "WITHDRAWAL" })) {
+      return;
+    }
+
     ApiResponse.success(res, 200, {
       message: "Withdraw completed successfully",
       code: "WITHDRAW_TRANSACTION_SUCCEDED",
@@ -119,7 +159,7 @@ export const transfer = async (req: AuthRequest, res: Response): Promise<void> =
     if (Number(amount) <= 0) {
       ApiResponse.error(res, 400, {
         message: "Invalid amount",
-        code: "INVALID_WITHDRAW_AMOUNT",
+        code: "INVALID_TRANSFER_AMOUNT",
       });
       return;
     }
@@ -139,6 +179,10 @@ export const transfer = async (req: AuthRequest, res: Response): Promise<void> =
       amount,
       request_id: idempotencyKey,
     });
+
+    if (!validateIdempotentTransaction({ res, transaction: transferTransaction, expectedType: "TRANSFER" })) {
+      return;
+    }
 
     ApiResponse.success(res, 200, {
       message: "Transfer completed successfully",

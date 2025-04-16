@@ -1,13 +1,11 @@
 import { DataTypes, Model } from "sequelize";
 import sequelize from "../databases/database";
-
-const transactionLogTypes = ["PENDING", "COMPLETED", "FAILED"] as const;
-export type transactionLogType = (typeof transactionLogTypes)[number];
+import { TransactionLogType, transactionLogTypes } from "../utils/types";
 
 export class TransactionLog extends Model {
   public id!: number;
   public transaction_id!: number;
-  public status!: transactionLogType;
+  public status!: TransactionLogType;
   public error_message!: string;
 }
 

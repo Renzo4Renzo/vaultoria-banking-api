@@ -1,12 +1,10 @@
 import { DataTypes, Model } from "sequelize";
 import sequelize from "../databases/database";
-
-const transactionTypes = ["DEPOSIT", "WITHDRAWAL", "TRANSFER"] as const;
-type transactionType = (typeof transactionTypes)[number];
+import { TransactionType, transactionTypes } from "../utils/types";
 
 export class Transaction extends Model {
   public id!: number;
-  public type!: transactionType;
+  public type!: TransactionType;
   public amount!: number;
   public from_account_id?: number;
   public to_account_id?: number;

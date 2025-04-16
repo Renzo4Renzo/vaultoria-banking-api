@@ -3,22 +3,32 @@ import sequelize from "../databases/database";
 import { Transaction } from "../models/Transaction";
 import { Account } from "../models/Account";
 import { AccountOwner } from "../models/AccountOwner";
-import { TransactionLog, transactionLogType } from "../models/TransactionLog";
+import { TransactionLog } from "../models/TransactionLog";
 import { DepositIntoAccountDTO, TransferFromAccountDTO, WithdrawFromAccountDTO } from "../dtos/transaction.dto";
+import { TransactionWithLogInfo } from "../utils/types";
 
-type TransactionWithStatus = Transaction & { status?: transactionLogType };
+const getTransactionIfExists = async (request_id: string): Promise<TransactionWithLogInfo | null> => {
+  const existingTransaction = await Transaction.findOne({ where: { request_id } });
+  if (!existingTransaction) return null;
+
+  const existingLog = await TransactionLog.findOne({ where: { transaction_id: existingTransaction.id } });
+
+  return {
+    ...existingTransaction.get({ plain: true }),
+    status: existingLog?.status,
+    error_message: existingLog?.error_message,
+  };
+};
 
 export const depositIntoAccount = async ({
   user_id,
   to_account_id,
   amount,
   request_id,
-}: DepositIntoAccountDTO): Promise<Transaction> => {
+}: DepositIntoAccountDTO): Promise<TransactionWithLogInfo> => {
   if (request_id) {
-    const existingTransaction = await Transaction.findOne({ where: { request_id } });
-    if (existingTransaction) {
-      return existingTransaction;
-    }
+    const existingTransaction = await getTransactionIfExists(request_id);
+    if (existingTransaction) return existingTransaction;
   }
 
   const newTransaction = await Transaction.create({
@@ -80,12 +90,10 @@ export const withdrawFromAccount = async ({
   from_account_id,
   amount,
   request_id,
-}: WithdrawFromAccountDTO): Promise<Transaction> => {
+}: WithdrawFromAccountDTO): Promise<TransactionWithLogInfo> => {
   if (request_id) {
-    const existingTransaction = await Transaction.findOne({ where: { request_id } });
-    if (existingTransaction) {
-      return existingTransaction;
-    }
+    const existingTransaction = await getTransactionIfExists(request_id);
+    if (existingTransaction) return existingTransaction;
   }
 
   const newTransaction = await Transaction.create({
@@ -152,13 +160,10 @@ export const transferToAccount = async ({
   to_account_id,
   amount,
   request_id,
-}: TransferFromAccountDTO): Promise<TransactionWithStatus> => {
+}: TransferFromAccountDTO): Promise<TransactionWithLogInfo> => {
   if (request_id) {
-    const existingTransaction = await Transaction.findOne({ where: { request_id } });
-    if (existingTransaction) {
-      const existingLog = await TransactionLog.findOne({ where: { transaction_id: existingTransaction.id } });
-      return { ...existingTransaction.get({ plain: true }), status: existingLog!.status };
-    }
+    const existingTransaction = await getTransactionIfExists(request_id);
+    if (existingTransaction) return existingTransaction;
   }
 
   const newTransaction = await Transaction.create({
