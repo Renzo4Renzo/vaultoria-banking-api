@@ -9,9 +9,11 @@
   "scripts": {
     "build": "tsc --build",
     "dev": "ts-node ./src/server.ts",
-    "start:dev": "nodemon --watch src --ext ts --exec ts-node ./src/server.ts"
+    "start:dev": "nodemon --watch src --ext ts --exec ts-node ./src/server.ts",
+    "test:concurrency": "ts-node test/concurrent_transactions.ts"
   },
   "dependencies": {
+    "axios": "^1.9.0",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",

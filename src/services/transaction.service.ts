@@ -181,8 +181,14 @@ export const transferToAccount = async ({
 
   try {
     await sequelize.transaction(async (t) => {
-      const sourceAccount = await Account.findByPk(from_account_id, { transaction: t, lock: t.LOCK.UPDATE });
-      const destinationAccount = await Account.findByPk(to_account_id, { transaction: t, lock: t.LOCK.UPDATE });
+      const accounts = await Account.findAll({
+        where: { id: [from_account_id, to_account_id] },
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+
+      const sourceAccount = accounts.find((acc) => acc.id === from_account_id);
+      const destinationAccount = accounts.find((acc) => acc.id === to_account_id);
 
       if (!sourceAccount) {
         throw new Error("Source account not found");
@@ -204,15 +210,6 @@ export const transferToAccount = async ({
       if (!isOwner) {
         throw new Error("Unauthorized access to account");
       }
-
-      await AccountOwner.findOne({
-        where: {
-          user_id,
-          account_id: to_account_id,
-        },
-        transaction: t,
-        lock: t.LOCK.UPDATE,
-      });
 
       await newTransaction.update({ from_account_id, to_account_id }, { transaction: t });
 

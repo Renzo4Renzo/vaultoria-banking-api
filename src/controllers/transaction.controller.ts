@@ -3,7 +3,7 @@ import { depositIntoAccount, transferToAccount, withdrawFromAccount } from "../s
 import { AuthRequest } from "../middleware/auth";
 import { ApiResponse } from "../utils/response";
 import { validateRequiredFields } from "../utils/validateRequiredFields";
-import { TransactionType, TransactionWithLogInfo } from "../utils/types";
+import { TransactionWithLogInfo } from "../utils/types";
 
 const errorMap: Record<string, { status: number; code: string }> = {
   "Account not found": { status: 404, code: "ACCOUNT_NOT_FOUND" },
@@ -16,27 +16,13 @@ const errorMap: Record<string, { status: number; code: string }> = {
 interface IdempotentValidationOptions {
   res: Response;
   transaction: TransactionWithLogInfo;
-  expectedType: TransactionType;
 }
 
-export const validateIdempotentTransaction = ({
-  res,
-  transaction,
-  expectedType,
-}: IdempotentValidationOptions): boolean => {
-  if (transaction.type !== expectedType) {
-    ApiResponse.error(res, 400, {
-      message: `The Idempotency-Key Header should belong to a ${expectedType.toLowerCase()} operation`,
-      code: "INCORRECT_TRANSACTION",
-    });
-    return false;
-  }
-
+export const validateIdempotentTransaction = ({ res, transaction }: IdempotentValidationOptions): boolean => {
   if (transaction.status) {
     ApiResponse.error(res, 409, {
       message: "This request has already been processed",
       code: "DUPLICATE_TRANSACTION",
-      data: transaction,
     });
     return false;
   }
@@ -66,7 +52,7 @@ export const deposit = async (req: AuthRequest, res: Response): Promise<void> =>
 
     const depositTransaction = await depositIntoAccount({ user_id, to_account_id, amount, request_id: idempotencyKey });
 
-    if (!validateIdempotentTransaction({ res, transaction: depositTransaction, expectedType: "DEPOSIT" })) {
+    if (!validateIdempotentTransaction({ res, transaction: depositTransaction })) {
       return;
     }
 
@@ -116,7 +102,7 @@ export const withdraw = async (req: AuthRequest, res: Response): Promise<void> =
       request_id: idempotencyKey,
     });
 
-    if (!validateIdempotentTransaction({ res, transaction: withdrawTransaction, expectedType: "WITHDRAWAL" })) {
+    if (!validateIdempotentTransaction({ res, transaction: withdrawTransaction })) {
       return;
     }
 
@@ -180,7 +166,7 @@ export const transfer = async (req: AuthRequest, res: Response): Promise<void> =
       request_id: idempotencyKey,
     });
 
-    if (!validateIdempotentTransaction({ res, transaction: transferTransaction, expectedType: "TRANSFER" })) {
+    if (!validateIdempotentTransaction({ res, transaction: transferTransaction })) {
       return;
     }
 

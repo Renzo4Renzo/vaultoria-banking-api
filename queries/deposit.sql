@@ -9,7 +9,7 @@ DECLARE
   v_account_balance NUMERIC(12,2);
   v_error TEXT;
 BEGIN
-  -- Check if transaction with request_id already exists
+  -- Check if transaction already exists
   IF p_request_id IS NOT NULL THEN
     SELECT *
     INTO v_transaction
@@ -18,8 +18,7 @@ BEGIN
     LIMIT 1;
 
     IF FOUND THEN
-      -- Already exists, nothing more to do
-		RAISE NOTICE 'Transaction % already exists', p_request_id;
+		  RAISE NOTICE 'Transaction % already exists', p_request_id;
       RETURN;
     END IF;
   END IF;
