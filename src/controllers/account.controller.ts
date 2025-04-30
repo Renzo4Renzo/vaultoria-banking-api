@@ -3,6 +3,7 @@ import { AuthRequest } from "../middleware/auth";
 import { createAccount, getAccountBalance } from "../services/account.service";
 import { ApiResponse } from "../utils/response";
 import { validateRequiredFields } from "../utils/validateRequiredFields";
+import { setMappedError } from "../utils/setMappedError";
 
 export const postAccount = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -45,7 +46,7 @@ export const getBalance = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    const balance = await getAccountBalance(user_id, Number(account_id));
+    const balance = await getAccountBalance(user_id, account_id);
 
     ApiResponse.success(res, 200, {
       message: "Balance retrieved successfully",
@@ -53,17 +54,7 @@ export const getBalance = async (req: AuthRequest, res: Response): Promise<void>
       data: { balance },
     });
   } catch (error: any) {
-    const errorMap: Record<string, { status: number; code: string }> = {
-      "Account not found": { status: 404, code: "ACCOUNT_NOT_FOUND" },
-      "Unauthorized access to account": { status: 403, code: "RETRIEVE_ACCOUNT_NOT_AUTHORIZED" },
-    };
-
-    if (error.message && errorMap[error.message]) {
-      const { status, code } = errorMap[error.message];
-      ApiResponse.error(res, status, {
-        message: error.message,
-        code,
-      });
+    if (setMappedError(res, error)) {
       return;
     }
 

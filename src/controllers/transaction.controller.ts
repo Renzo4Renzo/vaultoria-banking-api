@@ -4,14 +4,8 @@ import { AuthRequest } from "../middleware/auth";
 import { ApiResponse } from "../utils/response";
 import { validateRequiredFields } from "../utils/validateRequiredFields";
 import { TransactionWithLogInfo } from "../utils/types";
-
-const errorMap: Record<string, { status: number; code: string }> = {
-  "Account not found": { status: 404, code: "ACCOUNT_NOT_FOUND" },
-  "Source account not found": { status: 404, code: "SOURCE_ACCOUNT_NOT_FOUND" },
-  "Destination account not found": { status: 404, code: "DESTINATION_ACCOUNT_NOT_FOUND" },
-  "Unauthorized access to account": { status: 403, code: "TRANSACTION_NOT_AUTHORIZED" },
-  "Insufficient balance": { status: 409, code: "INSUFFICIENT_BALANCE" },
-};
+import { setMappedError } from "../utils/setMappedError";
+import { errorMap } from "../utils/error";
 
 interface IdempotentValidationOptions {
   res: Response;
@@ -62,12 +56,7 @@ export const deposit = async (req: AuthRequest, res: Response): Promise<void> =>
       data: depositTransaction,
     });
   } catch (error: any) {
-    if (error.message && errorMap[error.message]) {
-      const { status, code } = errorMap[error.message];
-      ApiResponse.error(res, status, {
-        message: error.message,
-        code,
-      });
+    if (setMappedError(res, error)) {
       return;
     }
 
@@ -112,12 +101,7 @@ export const withdraw = async (req: AuthRequest, res: Response): Promise<void> =
       data: withdrawTransaction,
     });
   } catch (error: any) {
-    if (error.message && errorMap[error.message]) {
-      const { status, code } = errorMap[error.message];
-      ApiResponse.error(res, status, {
-        message: error.message,
-        code,
-      });
+    if (setMappedError(res, error)) {
       return;
     }
 
@@ -176,12 +160,7 @@ export const transfer = async (req: AuthRequest, res: Response): Promise<void> =
       data: transferTransaction,
     });
   } catch (error: any) {
-    if (error.message && errorMap[error.message]) {
-      const { status, code } = errorMap[error.message];
-      ApiResponse.error(res, status, {
-        message: error.message,
-        code,
-      });
+    if (setMappedError(res, error)) {
       return;
     }
 

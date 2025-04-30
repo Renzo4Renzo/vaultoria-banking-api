@@ -3,6 +3,7 @@ import sequelize from "../databases/database";
 import { User } from "../models/User";
 import { Account } from "../models/Account";
 import { AccountOwner } from "../models/AccountOwner";
+import { ErrorMessages } from "../utils/error";
 
 export const createAccount = async (user_id: number): Promise<Account> => {
   return await sequelize.transaction(async (t) => {
@@ -40,7 +41,7 @@ export const getAccountBalance = async (user_id: number, account_id: number): Pr
   const account = await Account.findByPk(account_id);
 
   if (!account) {
-    throw new Error("Account not found");
+    throw new Error(ErrorMessages.AccountNotFound);
   }
 
   const isOwner = await AccountOwner.findOne({
@@ -51,7 +52,7 @@ export const getAccountBalance = async (user_id: number, account_id: number): Pr
   });
 
   if (!isOwner) {
-    throw new Error("Unauthorized access to account");
+    throw new Error(ErrorMessages.UnauthorizedAccessToAccount);
   }
 
   return account.balance;

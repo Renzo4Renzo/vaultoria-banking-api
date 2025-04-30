@@ -6,6 +6,7 @@ import { AccountOwner } from "../models/AccountOwner";
 import { TransactionLog } from "../models/TransactionLog";
 import { DepositIntoAccountDTO, TransferFromAccountDTO, WithdrawFromAccountDTO } from "../dtos/transaction.dto";
 import { TransactionWithLogInfo } from "../utils/types";
+import { ErrorMessages } from "../utils/error";
 
 const getTransactionIfExists = async (request_id: string): Promise<TransactionWithLogInfo | null> => {
   const existingTransaction = await Transaction.findOne({ where: { request_id } });
@@ -48,7 +49,7 @@ export const depositIntoAccount = async ({
       const account = await Account.findByPk(to_account_id, { transaction: t, lock: t.LOCK.UPDATE });
 
       if (!account) {
-        throw new Error("Account not found");
+        throw new Error(ErrorMessages.AccountNotFound);
       }
 
       const isOwner = await AccountOwner.findOne({
@@ -61,7 +62,7 @@ export const depositIntoAccount = async ({
       });
 
       if (!isOwner) {
-        throw new Error("Unauthorized access to account");
+        throw new Error(ErrorMessages.UnauthorizedAccessToAccount);
       }
 
       await newTransaction.update({ to_account_id }, { transaction: t });
@@ -113,7 +114,7 @@ export const withdrawFromAccount = async ({
       const account = await Account.findByPk(from_account_id, { transaction: t, lock: t.LOCK.UPDATE });
 
       if (!account) {
-        throw new Error("Account not found");
+        throw new Error(ErrorMessages.AccountNotFound);
       }
 
       const isOwner = await AccountOwner.findOne({
@@ -126,13 +127,13 @@ export const withdrawFromAccount = async ({
       });
 
       if (!isOwner) {
-        throw new Error("Unauthorized access to account");
+        throw new Error(ErrorMessages.UnauthorizedAccessToAccount);
       }
 
       await newTransaction.update({ from_account_id }, { transaction: t });
 
       if (account.balance - amount < 0) {
-        throw new Error("Insufficient balance");
+        throw new Error(ErrorMessages.InsufficientBalance);
       }
 
       const newBalance = Number(account.balance) - amount;
@@ -191,11 +192,11 @@ export const transferToAccount = async ({
       const destinationAccount = accounts.find((acc) => acc.id === to_account_id);
 
       if (!sourceAccount) {
-        throw new Error("Source account not found");
+        throw new Error(ErrorMessages.SourceAccountNotFound);
       }
 
       if (!destinationAccount) {
-        throw new Error("Destination account not found");
+        throw new Error(ErrorMessages.DestinationAccountNotFound);
       }
 
       const isOwner = await AccountOwner.findOne({
@@ -208,13 +209,13 @@ export const transferToAccount = async ({
       });
 
       if (!isOwner) {
-        throw new Error("Unauthorized access to account");
+        throw new Error(ErrorMessages.UnauthorizedAccessToAccount);
       }
 
       await newTransaction.update({ from_account_id, to_account_id }, { transaction: t });
 
       if (sourceAccount.balance - amount < 0) {
-        throw new Error("Insufficient balance");
+        throw new Error(ErrorMessages.InsufficientBalance);
       }
 
       const newSourceBalance = Number(sourceAccount.balance) - amount;
