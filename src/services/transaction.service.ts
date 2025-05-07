@@ -1,15 +1,16 @@
 import sequelize from "../databases/database";
 
-import { Transaction } from "../models/Transaction";
+import { Transaction as TransactionModel } from "../models/Transaction";
 import { Account } from "../models/Account";
 import { AccountOwner } from "../models/AccountOwner";
 import { TransactionLog } from "../models/TransactionLog";
 import { DepositIntoAccountDTO, TransferFromAccountDTO, WithdrawFromAccountDTO } from "../dtos/transaction.dto";
 import { TransactionWithLogInfo } from "../utils/types";
 import { ErrorMessages } from "../utils/error";
+import { Transaction } from "sequelize";
 
 const getTransactionIfExists = async (request_id: string): Promise<TransactionWithLogInfo | null> => {
-  const existingTransaction = await Transaction.findOne({ where: { request_id } });
+  const existingTransaction = await TransactionModel.findOne({ where: { request_id } });
   if (!existingTransaction) return null;
 
   const existingLog = await TransactionLog.findOne({ where: { transaction_id: existingTransaction.id } });
@@ -32,7 +33,7 @@ export const depositIntoAccount = async ({
     if (existingTransaction) return existingTransaction;
   }
 
-  const newTransaction = await Transaction.create({
+  const newTransaction = await TransactionModel.create({
     type: "DEPOSIT",
     amount,
     to_account_id: null,
@@ -45,20 +46,16 @@ export const depositIntoAccount = async ({
   });
 
   try {
-    await sequelize.transaction(async (t) => {
-      const account = await Account.findByPk(to_account_id, { transaction: t, lock: t.LOCK.UPDATE });
+    await sequelize.transaction({ isolationLevel: Transaction.ISOLATION_LEVELS.REPEATABLE_READ }, async (t) => {
+      const account = await Account.findByPk(to_account_id, { transaction: t });
 
       if (!account) {
         throw new Error(ErrorMessages.AccountNotFound);
       }
 
       const isOwner = await AccountOwner.findOne({
-        where: {
-          user_id,
-          account_id: to_account_id,
-        },
+        where: { user_id, account_id: to_account_id },
         transaction: t,
-        lock: t.LOCK.UPDATE,
       });
 
       if (!isOwner) {
@@ -71,9 +68,7 @@ export const depositIntoAccount = async ({
       await account.update({ balance: newBalance }, { transaction: t });
     });
 
-    await transactionLog.update({
-      status: "COMPLETED",
-    });
+    await transactionLog.update({ status: "COMPLETED" });
 
     return newTransaction;
   } catch (error: any) {
@@ -81,7 +76,6 @@ export const depositIntoAccount = async ({
       status: "FAILED",
       error_message: error.message,
     });
-
     throw error;
   }
 };
@@ -97,7 +91,7 @@ export const withdrawFromAccount = async ({
     if (existingTransaction) return existingTransaction;
   }
 
-  const newTransaction = await Transaction.create({
+  const newTransaction = await TransactionModel.create({
     type: "WITHDRAWAL",
     amount,
     from_account_id: null,
@@ -110,20 +104,16 @@ export const withdrawFromAccount = async ({
   });
 
   try {
-    await sequelize.transaction(async (t) => {
-      const account = await Account.findByPk(from_account_id, { transaction: t, lock: t.LOCK.UPDATE });
+    await sequelize.transaction({ isolationLevel: Transaction.ISOLATION_LEVELS.REPEATABLE_READ }, async (t) => {
+      const account = await Account.findByPk(from_account_id, { transaction: t });
 
       if (!account) {
         throw new Error(ErrorMessages.AccountNotFound);
       }
 
       const isOwner = await AccountOwner.findOne({
-        where: {
-          user_id,
-          account_id: from_account_id,
-        },
+        where: { user_id, account_id: from_account_id },
         transaction: t,
-        lock: t.LOCK.UPDATE,
       });
 
       if (!isOwner) {
@@ -132,7 +122,7 @@ export const withdrawFromAccount = async ({
 
       await newTransaction.update({ from_account_id }, { transaction: t });
 
-      if (account.balance - amount < 0) {
+      if (Number(account.balance) - amount < 0) {
         throw new Error(ErrorMessages.InsufficientBalance);
       }
 
@@ -140,9 +130,7 @@ export const withdrawFromAccount = async ({
       await account.update({ balance: newBalance }, { transaction: t });
     });
 
-    await transactionLog.update({
-      status: "COMPLETED",
-    });
+    await transactionLog.update({ status: "COMPLETED" });
 
     return newTransaction;
   } catch (error: any) {
@@ -150,7 +138,6 @@ export const withdrawFromAccount = async ({
       status: "FAILED",
       error_message: error.message,
     });
-
     throw error;
   }
 };
@@ -167,7 +154,7 @@ export const transferToAccount = async ({
     if (existingTransaction) return existingTransaction;
   }
 
-  const newTransaction = await Transaction.create({
+  const newTransaction = await TransactionModel.create({
     type: "TRANSFER",
     amount,
     from_account_id: null,
@@ -181,11 +168,10 @@ export const transferToAccount = async ({
   });
 
   try {
-    await sequelize.transaction(async (t) => {
+    await sequelize.transaction({ isolationLevel: Transaction.ISOLATION_LEVELS.REPEATABLE_READ }, async (t) => {
       const accounts = await Account.findAll({
         where: { id: [from_account_id, to_account_id] },
         transaction: t,
-        lock: t.LOCK.UPDATE,
       });
 
       const sourceAccount = accounts.find((acc) => acc.id === from_account_id);
@@ -200,12 +186,8 @@ export const transferToAccount = async ({
       }
 
       const isOwner = await AccountOwner.findOne({
-        where: {
-          user_id,
-          account_id: from_account_id,
-        },
+        where: { user_id, account_id: from_account_id },
         transaction: t,
-        lock: t.LOCK.UPDATE,
       });
 
       if (!isOwner) {
@@ -214,7 +196,7 @@ export const transferToAccount = async ({
 
       await newTransaction.update({ from_account_id, to_account_id }, { transaction: t });
 
-      if (sourceAccount.balance - amount < 0) {
+      if (Number(sourceAccount.balance) - amount < 0) {
         throw new Error(ErrorMessages.InsufficientBalance);
       }
 
@@ -225,9 +207,7 @@ export const transferToAccount = async ({
       await destinationAccount.update({ balance: newDestinationBalance }, { transaction: t });
     });
 
-    await transactionLog.update({
-      status: "COMPLETED",
-    });
+    await transactionLog.update({ status: "COMPLETED" });
 
     return newTransaction;
   } catch (error: any) {
@@ -235,7 +215,6 @@ export const transferToAccount = async ({
       status: "FAILED",
       error_message: error.message,
     });
-
     throw error;
   }
 };

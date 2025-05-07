@@ -1,10 +1,12 @@
 import { ApiResponse } from "./response";
 import { Response } from "express";
 
-export function validateRequiredFields(res: Response, body: any, requiredFields: string[]): boolean {
+export function validateRequiredFields(res: Response, body: Record<string, any>): boolean {
+  const requiredFields = Object.keys(body);
+
   const missingFields = requiredFields.filter(
     (field) => body[field] == null || body[field] === "" || Number.isNaN(body[field])
-  ); // catches undefined, null, empty strings and NaN values
+  );
 
   if (missingFields.length > 0) {
     ApiResponse.error(res, 400, {

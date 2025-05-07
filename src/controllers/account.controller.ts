@@ -9,7 +9,7 @@ export const postAccount = async (req: AuthRequest, res: Response): Promise<void
   try {
     const user_id = Number(req.user?.id);
 
-    const isValid = validateRequiredFields(res, { user_id }, ["user_id"]);
+    const isValid = validateRequiredFields(res, { user_id });
 
     if (!isValid) {
       return;
@@ -40,7 +40,7 @@ export const getBalance = async (req: AuthRequest, res: Response): Promise<void>
     const user_id = Number(req.user?.id);
     const account_id = Number(req.params.account_id);
 
-    const isValid = validateRequiredFields(res, { user_id, account_id }, ["user_id", "account_id"]);
+    const isValid = validateRequiredFields(res, { user_id, account_id });
 
     if (!isValid) {
       return;

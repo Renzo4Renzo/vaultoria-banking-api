@@ -13,12 +13,12 @@ const ENDPOINTS_SEQUENCE = [
 const USER_ID = 20;
 
 const payloads = [
-  { to_account_id: 24, amount: 2 },
-  { from_account_id: 24, amount: 20 },
-  { from_account_id: 24, to_account_id: 16, amount: 7 },
-  { from_account_id: 24, amount: 10 },
-  { from_account_id: 24, to_account_id: 16, amount: 11 },
-  { to_account_id: 24, amount: 3 },
+  { to_account_id: 24, amount: 12 },
+  { from_account_id: 24, amount: 8 },
+  { from_account_id: 24, to_account_id: 16, amount: 10 },
+  { from_account_id: 24, amount: 2 },
+  { from_account_id: 24, to_account_id: 16, amount: 5 },
+  { to_account_id: 24, amount: 18 },
 ];
 
 async function main() {

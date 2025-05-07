@@ -5,7 +5,7 @@ import { ApiResponse } from "../utils/response";
 import { validateRequiredFields } from "../utils/validateRequiredFields";
 import { TransactionWithLogInfo } from "../utils/types";
 import { setMappedError } from "../utils/setMappedError";
-import { errorMap } from "../utils/error";
+import { withRetry } from "../utils/retry";
 
 interface IdempotentValidationOptions {
   res: Response;
@@ -30,7 +30,7 @@ export const deposit = async (req: AuthRequest, res: Response): Promise<void> =>
     const { to_account_id, amount } = req.body;
     const idempotencyKey = req.header("Idempotency-Key") || undefined;
 
-    const isValid = validateRequiredFields(res, { user_id, ...req.body }, ["user_id", "to_account_id", "amount"]);
+    const isValid = validateRequiredFields(res, { user_id, ...req.body });
 
     if (!isValid) {
       return;
@@ -44,7 +44,9 @@ export const deposit = async (req: AuthRequest, res: Response): Promise<void> =>
       return;
     }
 
-    const depositTransaction = await depositIntoAccount({ user_id, to_account_id, amount, request_id: idempotencyKey });
+    const depositTransaction = await withRetry(() =>
+      depositIntoAccount({ user_id, to_account_id, amount, request_id: idempotencyKey })
+    );
 
     if (!validateIdempotentTransaction({ res, transaction: depositTransaction })) {
       return;
@@ -70,7 +72,7 @@ export const withdraw = async (req: AuthRequest, res: Response): Promise<void> =
     const { from_account_id, amount } = req.body;
     const idempotencyKey = req.header("Idempotency-Key") || undefined;
 
-    const isValid = validateRequiredFields(res, { user_id, ...req.body }, ["user_id", "from_account_id", "amount"]);
+    const isValid = validateRequiredFields(res, { user_id, ...req.body });
 
     if (!isValid) {
       return;
@@ -84,12 +86,14 @@ export const withdraw = async (req: AuthRequest, res: Response): Promise<void> =
       return;
     }
 
-    const withdrawTransaction = await withdrawFromAccount({
-      user_id,
-      from_account_id,
-      amount,
-      request_id: idempotencyKey,
-    });
+    const withdrawTransaction = await withRetry(() =>
+      withdrawFromAccount({
+        user_id,
+        from_account_id,
+        amount,
+        request_id: idempotencyKey,
+      })
+    );
 
     if (!validateIdempotentTransaction({ res, transaction: withdrawTransaction })) {
       return;
@@ -115,12 +119,7 @@ export const transfer = async (req: AuthRequest, res: Response): Promise<void> =
     const { from_account_id, to_account_id, amount } = req.body;
     const idempotencyKey = req.header("Idempotency-Key") || undefined;
 
-    const isValid = validateRequiredFields(res, { user_id, ...req.body }, [
-      "user_id",
-      "from_account_id",
-      "to_account_id",
-      "amount",
-    ]);
+    const isValid = validateRequiredFields(res, { user_id, ...req.body });
 
     if (!isValid) {
       return;
@@ -142,13 +141,15 @@ export const transfer = async (req: AuthRequest, res: Response): Promise<void> =
       return;
     }
 
-    const transferTransaction = await transferToAccount({
-      user_id,
-      from_account_id,
-      to_account_id,
-      amount,
-      request_id: idempotencyKey,
-    });
+    const transferTransaction = await withRetry(() =>
+      transferToAccount({
+        user_id,
+        from_account_id,
+        to_account_id,
+        amount,
+        request_id: idempotencyKey,
+      })
+    );
 
     if (!validateIdempotentTransaction({ res, transaction: transferTransaction })) {
       return;

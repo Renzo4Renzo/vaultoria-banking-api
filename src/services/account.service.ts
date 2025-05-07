@@ -1,4 +1,5 @@
 import sequelize from "../databases/database";
+import { Transaction } from "sequelize";
 
 import { User } from "../models/User";
 import { Account } from "../models/Account";
@@ -6,8 +7,11 @@ import { AccountOwner } from "../models/AccountOwner";
 import { ErrorMessages } from "../utils/error";
 
 export const createAccount = async (user_id: number): Promise<Account> => {
-  return await sequelize.transaction(async (t) => {
-    const user = await User.findByPk(user_id, { transaction: t, lock: t.LOCK.UPDATE });
+  return await sequelize.transaction({ isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED }, async (t) => {
+    const user = await User.findByPk(user_id, {
+      attributes: ["id"],
+      transaction: t,
+    });
 
     if (!user) {
       throw new Error("User not found");
@@ -19,11 +23,6 @@ export const createAccount = async (user_id: number): Promise<Account> => {
       },
       { transaction: t }
     );
-
-    await Account.findByPk(account.id, {
-      transaction: t,
-      lock: t.LOCK.UPDATE,
-    });
 
     await AccountOwner.create(
       {
@@ -38,7 +37,10 @@ export const createAccount = async (user_id: number): Promise<Account> => {
 };
 
 export const getAccountBalance = async (user_id: number, account_id: number): Promise<Account["balance"]> => {
-  const account = await Account.findByPk(account_id);
+  const account = await Account.findOne({
+    where: { id: account_id },
+    attributes: ["id", "balance"],
+  });
 
   if (!account) {
     throw new Error(ErrorMessages.AccountNotFound);

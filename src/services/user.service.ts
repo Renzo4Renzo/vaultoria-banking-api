@@ -1,5 +1,8 @@
 import { User } from "../models/User";
 import { CreateUserDTO } from "../dtos/user.dto";
+import { ErrorMessages } from "../utils/error";
+import { isUniqueConstraintViolation } from "../utils/databaseViolations";
+
 // import { Pool } from "pg";
 
 // const pool = new Pool({
@@ -24,5 +27,12 @@ import { CreateUserDTO } from "../dtos/user.dto";
 // };
 
 export const createUser = async ({ name, email }: CreateUserDTO): Promise<User> => {
-  return await User.create({ name, email });
+  try {
+    return await User.create({ name, email });
+  } catch (error) {
+    if (isUniqueConstraintViolation(error) && (error as any).fields["email"]) {
+      throw new Error(ErrorMessages.UserEmailNotUnique);
+    }
+    throw error;
+  }
 };
