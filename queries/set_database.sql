@@ -37,12 +37,9 @@ CREATE TABLE transaction_logs (
 );
 
 -- Populate Tables
-<<<<<<< HEAD
-=======
 INSERT INTO users (name,email) VALUES ('Vernon Dursley', 'vernon.dursley@gmail.com')
 INSERT INTO users (name,email) VALUES ('Tom Riddle', 'tom.riddle@gmail.com')
 INSERT INTO users (name,email) VALUES ('Narcissa Malfoy', 'narcissa.malfoy@gmail.com')
->>>>>>> develop
 INSERT INTO users (name,email) VALUES ('Rubeus Hagrid', 'rubeus.hagrid@gmail.com')
 INSERT INTO users (name,email) VALUES ('Ginevra Weasley', 'ginevra.weasley@gmail.com')
 INSERT INTO users (name,email) VALUES ('Alastor Moody', 'alastor.moody@gmail.com')
@@ -50,11 +47,7 @@ INSERT INTO users (name,email) VALUES ('Nymphadora Tonks', 'nymphadora.tonks@gma
 
 DO $$
 DECLARE
-<<<<<<< HEAD
-  user_ids INTEGER[] := ARRAY[2, 3, 4];  -- Replace with your user IDs
-=======
   user_ids INTEGER[] := ARRAY[1, 2, 3, 4, 5, 6, 7];  -- Replace with your user IDs
->>>>>>> develop
   uid INTEGER;
   new_account_id INTEGER;
 BEGIN
