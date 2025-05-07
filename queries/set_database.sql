@@ -1,7 +1,4 @@
-<<<<<<< HEAD
 -- Create tables
-=======
->>>>>>> develop
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     name VARCHAR NOT NULL,
