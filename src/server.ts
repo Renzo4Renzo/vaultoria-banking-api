@@ -15,8 +15,6 @@ app.use(express.json());
 
 initializeModels();
 
-console.log("Registered models:", sequelize.models);
-
 sequelize
   .sync({ alter: true })
   .then(() => console.log("Database tables updated!"))
