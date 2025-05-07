@@ -5,7 +5,7 @@ import { ApiResponse } from "../utils/response";
 import { validateRequiredFields } from "../utils/validateRequiredFields";
 import { TransactionWithLogInfo } from "../utils/types";
 import { setMappedError } from "../utils/setMappedError";
-import { withRetry } from "../utils/retry";
+import { withRetry } from "../utils/retryDBCall";
 
 interface IdempotentValidationOptions {
   res: Response;

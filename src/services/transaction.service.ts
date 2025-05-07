@@ -6,7 +6,7 @@ import { AccountOwner } from "../models/AccountOwner";
 import { TransactionLog } from "../models/TransactionLog";
 import { DepositIntoAccountDTO, TransferFromAccountDTO, WithdrawFromAccountDTO } from "../dtos/transaction.dto";
 import { TransactionWithLogInfo } from "../utils/types";
-import { ErrorMessages } from "../utils/error";
+import { ErrorMessages } from "../utils/errorMessages";
 import { Transaction } from "sequelize";
 
 const getTransactionIfExists = async (request_id: string): Promise<TransactionWithLogInfo | null> => {

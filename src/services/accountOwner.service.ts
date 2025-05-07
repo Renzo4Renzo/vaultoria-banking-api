@@ -4,7 +4,7 @@ import sequelize from "../databases/database";
 import { Account } from "../models/Account";
 import { AccountOwner } from "../models/AccountOwner";
 import { User } from "../models/User";
-import { ErrorMessages } from "../utils/error";
+import { ErrorMessages } from "../utils/errorMessages";
 import { isForeignKeyViolation, isPrimaryKeyViolation } from "../utils/databaseViolations";
 
 export const addOwner = async (

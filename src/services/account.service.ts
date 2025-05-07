@@ -4,7 +4,7 @@ import { Transaction } from "sequelize";
 import { User } from "../models/User";
 import { Account } from "../models/Account";
 import { AccountOwner } from "../models/AccountOwner";
-import { ErrorMessages } from "../utils/error";
+import { ErrorMessages } from "../utils/errorMessages";
 
 export const createAccount = async (user_id: number): Promise<Account> => {
   return await sequelize.transaction({ isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED }, async (t) => {
