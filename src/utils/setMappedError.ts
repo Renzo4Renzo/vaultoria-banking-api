@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { ApiResponse } from "./response";
-import { errorMap, ErrorMessage } from "./error";
+import { errorMap, ErrorMessage } from "./errorMessages";
 
 export const setMappedError = (res: Response, error: { message: ErrorMessage }) => {
   if (error.message && errorMap[error.message]) {

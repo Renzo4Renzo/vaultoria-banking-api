@@ -1,6 +1,6 @@
 import { User } from "../models/User";
 import { CreateUserDTO } from "../dtos/user.dto";
-import { ErrorMessages } from "../utils/error";
+import { ErrorMessages } from "../utils/errorMessages";
 import { isUniqueConstraintViolation } from "../utils/databaseViolations";
 
 // import { Pool } from "pg";
